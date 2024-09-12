@@ -13,5 +13,5 @@ repositories {
 }
 
 dependencies {
-    implementation "net.raphimc:ViaProxy:3.3.3"
+    implementation "net.raphimc:ViaProxy:${viaproxy_version}"
 }
