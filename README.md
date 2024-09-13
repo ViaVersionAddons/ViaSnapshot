@@ -1,5 +1,5 @@
 # ViaSnapshot
-### WARNING: This is experimental and is not safe to use on public servers. Use at your own risk!
+### ⚠️ WARNING: This is experimental and is not safe to use on public servers. Use at your own risk!
 **Allows you to join servers from snapshots, using ViaProxy. Currently only supports 15w31a.**
 
 Known Issues:
