@@ -22,7 +22,7 @@ public class Main extends ViaProxyPlugin {
             Via.getManager().getSubPlatforms().add(String.format("git-ViaSnapshot-%s", getVersion()));
 
             final ProtocolManager protocolManager = Via.getManager().getProtocolManager();
-            protocolManager.registerProtocol(new Protocol15w31a_To1_8(), ProtocolVersion.register(49, "15w31a (Client Only)"), ProtocolVersion.v1_8);
+            protocolManager.registerProtocol(new Protocol15w31a_To1_8(), SnapshotProtocolVersion.v15w31a, ProtocolVersion.v1_8);
             return null;
         });
     }
