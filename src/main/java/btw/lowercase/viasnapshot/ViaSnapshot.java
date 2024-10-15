@@ -9,7 +9,7 @@ import net.raphimc.viaproxy.ViaProxy;
 import net.raphimc.viaproxy.plugins.ViaProxyPlugin;
 import net.raphimc.viaproxy.plugins.events.ProtocolTranslatorInitEvent;
 
-public class Main extends ViaProxyPlugin {
+public class ViaSnapshot extends ViaProxyPlugin {
     @Override
     public void onEnable() {
         ViaProxy.EVENT_MANAGER.register(this);

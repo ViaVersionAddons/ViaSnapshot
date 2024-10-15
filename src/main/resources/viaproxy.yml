@@ -1,5 +1,5 @@
 name: "ViaSnapshot"
 version: "1.0.0"
 author: "lowercasebtw"
-main: "btw.lowercase.viasnapshot.Main"
+main: "btw.lowercase.viasnapshot.ViaSnapshot"
 min-version: "3.3.3"
