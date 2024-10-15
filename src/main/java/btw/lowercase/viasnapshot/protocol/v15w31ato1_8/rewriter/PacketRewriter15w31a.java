@@ -10,7 +10,7 @@ import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.api.type.types.version.Types1_8;
 import com.viaversion.viaversion.libs.gson.Gson;
 import com.viaversion.viaversion.libs.gson.GsonBuilder;
-import com.viaversion.viaversion.libs.gson.JsonObject;
+import com.viaversion.viaversion.protocols.v1_8to1_9.Protocol1_8To1_9;
 import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ClientboundPackets1_8;
 import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ServerboundPackets1_8;
 
@@ -19,13 +19,36 @@ import java.util.UUID;
 
 // https://wiki.vg/index.php?title=Pre-release_protocol&direction=prev&oldid=6740
 public class PacketRewriter15w31a {
-    private static Gson gson = new GsonBuilder().setLenient().create();
+    private static final Gson gson = new GsonBuilder().setLenient().create();
 
     public static void register(final Protocol15w31a_To1_8 protocol) {
-        // TODO: fix 1.8.x, weird json issue / race
-        // TODO: ignore status 6 in packet 0x07 (swap offhand)
         // NOTE/TODO: Entity action no longer sends 6 for open inventory
         // TODO: client status contains open inventory now, needs to send entity action to 1.8 server
+
+        protocol.registerClientbound(ClientboundPackets1_8.CHAT, new PacketHandlers() {
+            @Override
+            protected void register() {
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
+            }
+        });
+
+        protocol.registerClientbound(ClientboundPackets1_8.SET_EQUIPPED_ITEM, new PacketHandlers() {
+            @Override
+            protected void register() {
+                map(Types.VAR_INT); // Entity ID
+                handler(wrapper -> {
+                    int slot = wrapper.read(Types.SHORT); // Slot
+                    if (slot > 0) {
+                        slot++;
+                    }
+//					else {
+//						slot = 1; // TODO: possible config option to make everyone offhand
+//					}
+                    wrapper.write(Types.BYTE, (byte) slot);
+                });
+                map(Types.ITEM1_8); // Item
+            }
+        });
 
         protocol.registerClientbound(ClientboundPackets1_8.ADD_PLAYER, new PacketHandlers() {
             @Override
@@ -39,10 +62,7 @@ public class PacketRewriter15w31a {
                 map(Types.BYTE); // Pitch
                 read(Types.SHORT); // Hand Stack ID? (1.8 server)
                 map(Types1_8.ENTITY_DATA_LIST);
-                // TODO: Fix entity data
-                handler(wrapper -> {
-                    wrapper.set(Types1_8.ENTITY_DATA_LIST, 0, List.of());
-                });
+                // TODO: Fix errors in console about unknown/wrong entity data types
             }
         });
 
@@ -95,24 +115,36 @@ public class PacketRewriter15w31a {
             }
         });
 
-        protocol.registerClientbound(ClientboundPackets1_8.SET_EQUIPPED_ITEM, new PacketHandlers() {
+        protocol.registerClientbound(ClientboundPackets1_8.OPEN_SCREEN, new PacketHandlers() {
             @Override
             protected void register() {
-                map(Types.VAR_INT); // Entity ID
-                handler(wrapper -> {
-                    int slot = wrapper.read(Types.SHORT); // Slot
-                    if (slot > 0) {
-                        slot++;
-                    }
-//					else {
-//						slot = 1; // TODO: possible config option to make everyone offhand
-//					}
-                    wrapper.write(Types.BYTE, (byte) slot);
-                });
-                map(Types.ITEM1_8); // Item
+                map(Types.UNSIGNED_BYTE); // Window id
+                map(Types.STRING); // Window type
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Window title
+                map(Types.UNSIGNED_BYTE); // Number of slots
             }
         });
 
+        protocol.registerClientbound(ClientboundPackets1_8.UPDATE_SIGN, new PacketHandlers() {
+            @Override
+            protected void register() {
+                map(Types.BLOCK_POSITION1_8); // Block Position
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Line 1
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Line 2
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Line 3
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Line 4
+            }
+        });
+
+        // TODO: Issues in 1.21?
+        protocol.registerClientbound(ClientboundPackets1_8.TAB_LIST, new PacketHandlers() {
+            public void register() {
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
+            }
+        });
+
+        // TODO: Issues in 1.21?
         protocol.registerServerbound(ServerboundPackets15w31a.INTERACT, new PacketHandlers() {
             @Override
             public void register() {
@@ -132,6 +164,19 @@ public class PacketRewriter15w31a {
             }
         });
 
+        protocol.registerServerbound(ServerboundPackets15w31a.PLAYER_ACTION, new PacketHandlers() {
+            @Override
+            protected void register() {
+                map(Types.BYTE);
+                handler(wrapper -> {
+                    final byte status = wrapper.get(Types.BYTE, 0);
+                    if (status == 6) {
+                        wrapper.cancel(); // Disable off-hand key-bind/action
+                    }
+                });
+            }
+        });
+
         protocol.registerServerbound(ServerboundPackets15w31a.CONTAINER_CLICK, new PacketHandlers() {
             @Override
             protected void register() {
@@ -142,7 +187,7 @@ public class PacketRewriter15w31a {
                 map(Types.BYTE); // Mode
                 map(Types.ITEM1_8); // Clicked item
                 handler(wrapper -> {
-                    short slot = wrapper.get(Types.SHORT, 0);
+                    final short slot = wrapper.get(Types.SHORT, 0);
                     if (slot == 45) {
                         // TODO: set cursor back to item
                         wrapper.cancel(); // Ignore offhand slot
@@ -153,7 +198,7 @@ public class PacketRewriter15w31a {
 
         protocol.registerServerbound(ServerboundPackets15w31a.USE_ITEM, null, wrapper -> {
             wrapper.cancel();
-            // NOTE: Possibly bannable/noticable by anti-cheats?
+            // NOTE: Possibly bannable/noticeable by anti-cheats?
             final PacketWrapper useItemOn = PacketWrapper.create(ServerboundPackets1_8.USE_ITEM_ON, wrapper.user());
             useItemOn.write(Types.BLOCK_POSITION1_8, new BlockPosition(0, 0, 0)); // Block Position
             useItemOn.write(Types.UNSIGNED_BYTE, (short) -1); // Direction
@@ -184,41 +229,22 @@ public class PacketRewriter15w31a {
         protocol.registerServerbound(ServerboundPackets15w31a.CLIENT_INFORMATION, new PacketHandlers() {
             @Override
             protected void register() {
-                map(Types.STRING);        // Locale
-                map(Types.BYTE);          // View Distance
-                map(Types.BYTE);          // Chat Mode
-                map(Types.BOOLEAN);       // Chat Colors
+                map(Types.STRING); // Locale
+                map(Types.BYTE); // View Distance
+                map(Types.BYTE); // Chat Mode
+                map(Types.BOOLEAN); // Chat Colors
                 map(Types.UNSIGNED_BYTE); // Skin Parts
-                read(Types.BYTE);         // Hand (Ignore for 1.8)
+                read(Types.BYTE); // Hand (Ignore for 1.8)
             }
         });
 
         // Workarounds / Broken stuff
         {
-            // Workaround/Fix for some servers (currently not ideal)
-            protocol.registerClientbound(ClientboundPackets1_8.CHAT, wrapper -> {
-                String data = wrapper.read(Types.STRING);
-                byte unknown = wrapper.read(Types.BYTE);
-                try {
-                    JsonObject object = gson.fromJson(data, JsonObject.class);
-                    wrapper.write(Types.COMPONENT, object);
-                    wrapper.write(Types.BYTE, unknown);
-                } catch (Exception exception) {
-                    wrapper.cancel();
-                }
-            });
+            // TODO: Figure out why I can't remap the values to a component, I even tried the code from 1.9->1.8 class
+            protocol.cancelClientbound(ClientboundPackets1_8.SET_TITLES);
 
-            // ? causes weird kick
-            protocol.registerClientbound(ClientboundPackets1_8.SET_TITLES, PacketWrapper::cancel);
-
-            // Causes byte kick (1.8.x servers)
-            protocol.registerClientbound(ClientboundPackets1_8.TAB_LIST, PacketWrapper::cancel);
-
-            // TODO: Fix entity data
-            protocol.registerClientbound(ClientboundPackets1_8.SET_ENTITY_DATA, PacketWrapper::cancel);
-
-            // (can cause json issues)
-            protocol.registerClientbound(ClientboundPackets1_8.UPDATE_SIGN, PacketWrapper::cancel);
+            // TODO: Remap entity data
+            protocol.cancelClientbound(ClientboundPackets1_8.SET_ENTITY_DATA);
         }
     }
 }
