@@ -136,6 +136,12 @@ public class PacketRewriter15w31a {
             }
         });
 
+        protocol.registerClientbound(ClientboundPackets1_8.DISCONNECT, new PacketHandlers() {
+            public void register() {
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
+            }
+        });
+
         // TODO: Issues in 1.21?
         protocol.registerClientbound(ClientboundPackets1_8.TAB_LIST, new PacketHandlers() {
             public void register() {
