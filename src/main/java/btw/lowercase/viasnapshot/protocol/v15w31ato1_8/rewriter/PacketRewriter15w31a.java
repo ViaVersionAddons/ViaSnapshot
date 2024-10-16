@@ -8,8 +8,6 @@ import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.protocol.remapper.PacketHandlers;
 import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.api.type.types.version.Types1_8;
-import com.viaversion.viaversion.libs.gson.Gson;
-import com.viaversion.viaversion.libs.gson.GsonBuilder;
 import com.viaversion.viaversion.protocols.v1_8to1_9.Protocol1_8To1_9;
 import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ClientboundPackets1_8;
 import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ServerboundPackets1_8;
@@ -19,8 +17,6 @@ import java.util.UUID;
 
 // https://wiki.vg/index.php?title=Pre-release_protocol&direction=prev&oldid=6740
 public class PacketRewriter15w31a {
-    private static final Gson gson = new GsonBuilder().setLenient().create();
-
     public static void register(final Protocol15w31a_To1_8 protocol) {
         // NOTE/TODO: Entity action no longer sends 6 for open inventory
         // TODO: client status contains open inventory now, needs to send entity action to 1.8 server
@@ -115,6 +111,9 @@ public class PacketRewriter15w31a {
             }
         });
 
+        // TODO: Remap entity data
+        protocol.cancelClientbound(ClientboundPackets1_8.SET_ENTITY_DATA);
+
         protocol.registerClientbound(ClientboundPackets1_8.OPEN_SCREEN, new PacketHandlers() {
             @Override
             protected void register() {
@@ -138,15 +137,28 @@ public class PacketRewriter15w31a {
 
         protocol.registerClientbound(ClientboundPackets1_8.DISCONNECT, new PacketHandlers() {
             public void register() {
-                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Kick Message
+            }
+        });
+
+        // TODO: Issues in 1.21?
+        protocol.registerClientbound(ClientboundPackets1_8.SET_TITLES, new PacketHandlers() {
+            public void register() {
+                map(Types.VAR_INT); // Action
+                handler((wrapper) -> {
+                    final int action = wrapper.get(Types.VAR_INT, 0);
+                    if (action == 0 || action == 1) {
+                        Protocol1_8To1_9.STRING_TO_JSON.write(wrapper, wrapper.read(Types.STRING));
+                    }
+                });
             }
         });
 
         // TODO: Issues in 1.21?
         protocol.registerClientbound(ClientboundPackets1_8.TAB_LIST, new PacketHandlers() {
             public void register() {
-                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
-                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON);
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Title Text
+                map(Types.STRING, Protocol1_8To1_9.STRING_TO_JSON); // Footer Text
             }
         });
 
@@ -243,14 +255,5 @@ public class PacketRewriter15w31a {
                 read(Types.BYTE); // Hand (Ignore for 1.8)
             }
         });
-
-        // Workarounds / Broken stuff
-        {
-            // TODO: Figure out why I can't remap the values to a component, I even tried the code from 1.9->1.8 class
-            protocol.cancelClientbound(ClientboundPackets1_8.SET_TITLES);
-
-            // TODO: Remap entity data
-            protocol.cancelClientbound(ClientboundPackets1_8.SET_ENTITY_DATA);
-        }
     }
 }
