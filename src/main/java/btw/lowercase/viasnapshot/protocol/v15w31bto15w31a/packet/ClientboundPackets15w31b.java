@@ -1,8 +1,8 @@
-package btw.lowercase.viasnapshot.protocol.v15w31ato1_8.packet;
+package btw.lowercase.viasnapshot.protocol.v15w31bto15w31a.packet;
 
 import com.viaversion.viaversion.api.protocol.packet.ClientboundPacketType;
 
-public enum ClientboundPackets15w31a implements ClientboundPacketType {
+public enum ClientboundPackets15w31b implements ClientboundPacketType {
     KEEP_ALIVE,
     LOGIN,
     CHAT,
@@ -76,9 +76,9 @@ public enum ClientboundPackets15w31a implements ClientboundPacketType {
     SET_COMPRESSION,
     TAB_LIST,
     RESOURCE_PACK,
-    UPDATE_ENTITY_NBT;
+    BOSS_BAR;
 
-    ClientboundPackets15w31a() {
+    ClientboundPackets15w31b() {
     }
 
     public int getId() {

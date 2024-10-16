@@ -1,8 +1,8 @@
-package btw.lowercase.viasnapshot.protocol.v15w31ato1_8.packet;
+package btw.lowercase.viasnapshot.protocol.v15w31bto15w31a.packet;
 
 import com.viaversion.viaversion.api.protocol.packet.ServerboundPacketType;
 
-public enum ServerboundPackets15w31a implements ServerboundPacketType {
+public enum ServerboundPackets15w31b implements ServerboundPacketType {
     KEEP_ALIVE,
     CHAT,
     INTERACT,
@@ -31,7 +31,7 @@ public enum ServerboundPackets15w31a implements ServerboundPacketType {
     TELEPORT_TO_ENTITY,
     RESOURCE_PACK;
 
-    ServerboundPackets15w31a() {
+    ServerboundPackets15w31b() {
     }
 
     public int getId() {

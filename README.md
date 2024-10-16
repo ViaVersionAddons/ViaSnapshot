@@ -1,8 +1,16 @@
 # ViaSnapshot
+
 ### ⚠️ WARNING: This is experimental and is not safe to use on public servers. Use at your own risk!
-**Allows you to join servers from snapshots, using ViaProxy. Currently only supports 15w31a.**
+
+**Allows you to join servers from snapshots, using ViaProxy.**
+
+Supported Versions:
+
+- 15w31a
+- 15w31b
 
 Known Issues:
+
 - Item Drops are stone
 - Entity metadata is missing
 - Item interaction in newer versions is broken
@@ -11,6 +19,7 @@ Known Issues:
 - And more, possibly on purpose as some packets were disabled
 
 ## Installation and Usage
+
 1. Download the latest version from [GitHub Actions](https://github.com/ViaVersionAddons/ViaSnapshot/actions).
 2. Put the jar file into the plugins folder of ViaProxy
 3. Run ViaProxy. You should now be able to connect from a snapshot client to ViaProxy.
