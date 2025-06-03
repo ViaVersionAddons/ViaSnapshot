@@ -3,6 +3,10 @@ package btw.lowercase.viasnapshot.protocol.v15w31ato1_8.rewriter;
 import btw.lowercase.viasnapshot.protocol.v15w31ato1_8.Protocol15w31a_To1_8;
 import btw.lowercase.viasnapshot.protocol.v15w31ato1_8.packet.ServerboundPackets15w31a;
 import com.viaversion.viaversion.api.minecraft.BlockPosition;
+import com.viaversion.viaversion.api.minecraft.EulerAngle;
+import com.viaversion.viaversion.api.minecraft.Vector;
+import com.viaversion.viaversion.api.minecraft.entitydata.EntityData;
+import com.viaversion.viaversion.api.minecraft.entitydata.types.EntityDataTypes1_8;
 import com.viaversion.viaversion.api.minecraft.item.DataItem;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.protocol.remapper.PacketHandlers;
@@ -12,6 +16,7 @@ import com.viaversion.viaversion.protocols.v1_8to1_9.Protocol1_8To1_9;
 import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ClientboundPackets1_8;
 import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ServerboundPackets1_8;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -58,7 +63,12 @@ public class PacketRewriter15w31a {
                 map(Types.BYTE); // Pitch
                 read(Types.SHORT); // Hand Stack ID? (1.8 server)
                 map(Types1_8.ENTITY_DATA_LIST);
-                // TODO: Fix errors in console about unknown/wrong entity data types
+                handler(wrapper -> {
+                    List<EntityData> entityData = wrapper.get(Types1_8.ENTITY_DATA_LIST, 0);
+                    if (!entityData.isEmpty()) {
+                        wrapper.set(Types1_8.ENTITY_DATA_LIST, 0, handleEntityData(entityData));
+                    }
+                });
             }
         });
 
@@ -104,15 +114,29 @@ public class PacketRewriter15w31a {
                 map(Types.SHORT); // Velocity Y
                 map(Types.SHORT); // Velocity Z
                 map(Types1_8.ENTITY_DATA_LIST);
-                // TODO: Fix entity data
                 handler(wrapper -> {
-                    wrapper.set(Types1_8.ENTITY_DATA_LIST, 0, List.of());
+                    List<EntityData> entityData = wrapper.get(Types1_8.ENTITY_DATA_LIST, 0);
+                    if (!entityData.isEmpty()) {
+                        wrapper.set(Types1_8.ENTITY_DATA_LIST, 0, handleEntityData(entityData));
+                    }
                 });
             }
         });
 
         // TODO: Remap entity data
-        protocol.cancelClientbound(ClientboundPackets1_8.SET_ENTITY_DATA);
+        protocol.registerClientbound(ClientboundPackets1_8.SET_ENTITY_DATA, new PacketHandlers() {
+            @Override
+            protected void register() {
+                map(Types.VAR_INT); // Entity Id
+                map(Types1_8.ENTITY_DATA_LIST);
+                handler(wrapper -> {
+                    List<EntityData> entityData = wrapper.get(Types1_8.ENTITY_DATA_LIST, 0);
+                    if (!entityData.isEmpty()) {
+                        wrapper.set(Types1_8.ENTITY_DATA_LIST, 0, handleEntityData(entityData));
+                    }
+                });
+            }
+        });
 
         protocol.registerClientbound(ClientboundPackets1_8.OPEN_SCREEN, new PacketHandlers() {
             @Override
@@ -255,5 +279,54 @@ public class PacketRewriter15w31a {
                 read(Types.BYTE); // Hand (Ignore for 1.8)
             }
         });
+    }
+
+    private static List<EntityData> handleEntityData(List<EntityData> entityData) {
+        List<EntityData> newData = new ArrayList<>();
+
+        for (EntityData data : entityData) {
+            Object value = data.getValue();
+            if (value == null)
+                continue;
+            switch ((EntityDataTypes1_8) data.dataType()) {
+                case BYTE:
+                    if (data.dataType() == EntityDataTypes1_8.BYTE) {
+                        data.setValue(value);
+                    }
+
+                    if (data.dataType() == EntityDataTypes1_8.INT) {
+                        data.setValue(((Integer) value).byteValue());
+                    }
+
+                    if (data.dataType() == EntityDataTypes1_8.FLOAT) {
+                        data.setValue(((Float) value).byteValue());
+                    }
+
+                    if (data.dataType() == EntityDataTypes1_8.SHORT) {
+                        data.setValue(((Short) value).byteValue());
+                    }
+
+                    break;
+                case FLOAT:
+                case STRING:
+                case INT:
+                case SHORT:
+                case ITEM:
+                    data.setValue(value);
+                    break;
+                case BLOCK_POSITION:
+                    Vector vector = (Vector) value;
+                    data.setValue(vector);
+                    break;
+                case ROTATIONS:
+                    EulerAngle angle = (EulerAngle) value;
+                    data.setValue(angle);
+                    break;
+                default:
+                    throw new RuntimeException("Unhandled EntityDataType: " + data.dataType());
+            }
+        }
+
+        return newData;
     }
 }
