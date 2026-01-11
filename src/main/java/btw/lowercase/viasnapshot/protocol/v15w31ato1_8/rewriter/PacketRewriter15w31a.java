@@ -8,6 +8,7 @@ import com.viaversion.viaversion.api.minecraft.EulerAngle;
 import com.viaversion.viaversion.api.minecraft.Vector;
 import com.viaversion.viaversion.api.minecraft.entitydata.EntityData;
 import com.viaversion.viaversion.api.minecraft.entitydata.types.EntityDataTypes1_8;
+import com.viaversion.viaversion.api.minecraft.item.Item;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.protocols.v1_8to1_9.Protocol1_8To1_9;
@@ -175,14 +176,19 @@ public class PacketRewriter15w31a {
 			wrapper.cancel();
 
 			// NOTE: Possibly bannable/noticeable by anti-cheats?
-			final PacketWrapper useItemOn = PacketWrapper.create(ServerboundPackets1_8.USE_ITEM_ON, wrapper.user());
-			useItemOn.write(Types.BLOCK_POSITION1_8, new BlockPosition(-1, -1, -1)); // Block Position
-			useItemOn.write(Types.UNSIGNED_BYTE, (short) 255); // Direction
-			useItemOn.write(Types.ITEM1_8, Via.getManager().getProviders().get(HandItemProvider.class).getHandItem(wrapper.user())); // Item
-			useItemOn.write(Types.UNSIGNED_BYTE, (short) 0); // X
-			useItemOn.write(Types.UNSIGNED_BYTE, (short) 0); // Y
-			useItemOn.write(Types.UNSIGNED_BYTE, (short) 0); // Z
-			useItemOn.sendToServer(Protocol15w31a_To1_8.class);
+			final Item item = Via.getManager().getProviders().get(HandItemProvider.class).getHandItem(wrapper.user());
+			if (item != null && !item.isEmpty()) {
+				final PacketWrapper useItemOn = PacketWrapper.create(ServerboundPackets1_8.USE_ITEM_ON, wrapper.user());
+				useItemOn.write(Types.BLOCK_POSITION1_8, new BlockPosition(-1, -1, -1)); // Block Position
+				useItemOn.write(Types.UNSIGNED_BYTE, (short) 255); // Direction
+				useItemOn.write(Types.ITEM1_8, item); // Item
+				useItemOn.write(Types.UNSIGNED_BYTE, (short) 0); // X
+				useItemOn.write(Types.UNSIGNED_BYTE, (short) 0); // Y
+				useItemOn.write(Types.UNSIGNED_BYTE, (short) 0); // Z
+				useItemOn.sendToServer(Protocol15w31a_To1_8.class);
+			} else {
+				System.out.printf("Item was null! %s%n", item == null ? "null" : item);
+			}
 		});
 
 		protocol.registerServerbound(ServerboundPackets15w31a.USE_ITEM_ON, wrapper -> {
